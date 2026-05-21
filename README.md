@@ -130,7 +130,7 @@ Proyecto académico — Infraestructura TI.
       <a href="mailto:f.figueroadaz2@uandresbello.edu">Email</a>
     </td>
     <td align="center" width="20%">
-      <img src="https://avatars.githubusercontent.com/u/207567094?v=4" width="96" height="96" style="border-radius:50%" alt="Fernando Salazar" /><br>
+      <img src="https://avatars.githubusercontent.com/u/207567094?v=4" width="96" height="96" style="border-radius:50%" alt="Jose Maraboli" /><br>
       <strong>Jose Maraboli</strong><br>
       <sub>Documentation & QA</sub><br>
       <a href="mailto:j.marabolileal@uandresbello.edu">Email</a>
