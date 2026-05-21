@@ -76,7 +76,27 @@ python edge_ingestor.py --api http://localhost:8000 --max-frames 90 --stride 10
 
 ## Pruebas de Detección (Dev Tools)
 
-Dos herramientas en `ai/` para probar YOLOv8n con fotos o videos propios sin necesidad de levantar el stack completo.
+### Scripts Rápidos para Multitudes
+
+Dos scripts headless pensados para conteo en alta densidad (vagón de metro). Retornan JSON limpio, ideales para integrar en API:
+
+```powershell
+cd ai
+.\.venv\Scripts\python crowd_counter.py ruta\foto.jpg
+# → {"status": "success", "headcount": 42}
+
+.\.venv\Scripts\python crowd_counter_sahi.py ruta\foto.jpg
+# → {"status": "success", "headcount": 48}  (SAHI: más preciso en oclusión)
+```
+
+| Script | Técnica | imgsz | conf | iou |
+|--------|---------|-------|------|-----|
+| `crowd_counter.py` | YOLOv8n directo | 1280 | 0.25 | 0.7 |
+| `crowd_counter_sahi.py` | YOLOv8n + SAHI (sliced) | slice 640 | 0.25 | 0.7 (IOS) |
+
+Ambos exportan `analyze_crowd(image_path)` para importar desde FastAPI.
+
+### Navegador Interactivo
 
 ### 1. Navegador Interactivo — `dev_browser.py`
 
