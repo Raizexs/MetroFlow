@@ -11,7 +11,7 @@ Sistema de monitoreo de aforo para transporte masivo basado en visión artificia
 
 ## Overview
 
-MetroFlow separa inferencia (edge), lógica de negocio (API) y visualización (dashboard). Un ingestor local ejecuta YOLOv8 sobre video o cámara y envía conteos anonimizados al backend; el frontend consulta el estado cada cinco segundos. Documento técnico completo (arquitectura, capas, APIs y diagramas): [`docs/DOCUMENTO_TECNICO.md`](docs/DOCUMENTO_TECNICO.md). Índice: [`docs/INDEX.md`](docs/INDEX.md).
+MetroFlow separa inferencia (edge), lógica de negocio (API) y visualización (dashboard). Un ingestor local ejecuta YOLOv8 sobre video o cámara y envía conteos anonimizados al backend; el frontend consulta el estado cada cinco segundos.
 
 ## Core Features
 
@@ -39,9 +39,11 @@ MetroFlow separa inferencia (edge), lógica de negocio (API) y visualización (d
 
 ```powershell
 # API y PostgreSQL (Docker)
+
 docker compose up -d
 
 # API sin Docker
+
 cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -49,25 +51,28 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
 # Dashboard
+
 cd frontend
 npm install
 npm run dev
 ```
 
-URLs locales: API `http://localhost:8000`, documentación `http://localhost:8000/docs`, UI `http://localhost:5173`.
+URLs locales: API `http://localhost:8000`, 
+documentación `http://localhost:8000/docs`, 
+UI `http://localhost:5173`.
 
 ```powershell
 # Verificación de endpoints
+
 .\scripts\verify-rubric.ps1 -ApiUrl http://localhost:8000
 
 # Demo edge → API (requiere venv en ai/ y video en ai/videos/sample.mp4)
+
 cd ai
 python -m venv .venv
 .\.venv\Scripts\pip install -r requirements.txt
 python edge_ingestor.py --api http://localhost:8000 --max-frames 90 --stride 10
 ```
-
-Despliegue en cloud: [`docs/DEPLOY_CLOUD.md`](docs/DEPLOY_CLOUD.md).
 
 ## Environment Variables
 
@@ -95,43 +100,46 @@ Plantilla: [`.env.example`](.env.example).
 - Tracking persistente (DeepSORT) en servidor.
 - Ingesta RTSP e imágenes por lote en el ingestor edge.
 
-## License
-
-No se ha declarado una licencia en este repositorio. Consulte al autor antes de redistribuir o usar el código fuera del ámbito académico acordado.
-
 ## Authors
+Proyecto académico — Infraestructura TI. 
 
 <table>
   <tr>
     <td align="center" width="20%">
       <img src="https://avatars.githubusercontent.com/u/105559567?v=4" width="96" height="96" style="border-radius:50%" alt="Andres Tapia" /><br>
-      <strong>Andres Tapia</strong><br>
-      <sub>Product Manager</sub><br>
+      <strong>Andrés Tapia</strong><br>
+      <sub>Technical Lead</sub><br>
       <a href="mailto:a.tapialpez@uandresbello.edu">Email</a>
     </td>
     <td align="center" width="20%">
       <img src="https://avatars.githubusercontent.com/u/128178198?v=4" width="96" height="96" style="border-radius:50%" alt="Lukas Flores" /><br>
       <strong>Lukas Flores</strong><br>
-      <sub>Technical Lead</sub><br>
+      <sub>ML Developer</sub><br>
       <a href="mailto:l.floreszuiga@uandresbello.edu">Email</a>
     </td>
     <td align="center" width="20%">
       <img src="https://avatars.githubusercontent.com/u/190417123?v=4" width="96" height="96" style="border-radius:50%" alt="Gonzalo Jara" /><br>
       <strong>Gonzalo Jara</strong><br>
-      <sub>Scrum Master</sub><br>
+      <sub>Backend Developer</sub><br>
       <a href="mailto:g.jaravrsalovic@uandresbello.edu">Email</a>
     </td>
     <td align="center" width="20%">
       <img src="https://avatars.githubusercontent.com/u/128172645?v=4" width="96" height="96" style="border-radius:50%" alt="Felipe Figueroa" /><br>
       <strong>Felipe Figueroa</strong><br>
-      <sub>Developer</sub><br>
+      <sub>Frontend Developer</sub><br>
       <a href="mailto:f.figueroadaz2@uandresbello.edu">Email</a>
     </td>
     <td align="center" width="20%">
-      <img src="https://avatars.githubusercontent.com/u/185566076?v=4" width="96" height="96" style="border-radius:50%" alt="Fernando Salazar" /><br>
-      <strong>Fernando Salazar</strong><br>
-      <sub>Developer</sub><br>
+      <img src="https://avatars.githubusercontent.com/u/207567094?v=4" width="96" height="96" style="border-radius:50%" alt="Fernando Salazar" /><br>
+      <strong>Jose Maraboli</strong><br>
+      <sub>Documentation & QA</sub><br>
       <a href="mailto:f.salazarcartes@uandresbello.edu">Email</a>
     </td>
   </tr>
 </table>
+
+## License
+
+All rights reserved.
+
+This project is proprietary. No part of this repository may be copied, modified, distributed, sublicensed, or used for commercial purposes without prior written permission from the project owners.
