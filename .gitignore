@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Backend
+backend/.venv/
+backend/__pycache__/
+backend/README.md
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.vercel/
+frontend/README.md
+
+# Docker
+pgdata/
+
+# YOLO / ML caches
+*.pt
+runs/
+weights/
+
+# Test videos (keep folder via .gitkeep)
+ai/videos/*.mp4
+ai/videos/*.avi
+ai/videos/*.mov
+ai/videos/*.mkv
+ai/README.md
+
+# Documentation
+docs/
