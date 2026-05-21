@@ -133,7 +133,7 @@ Proyecto académico — Infraestructura TI.
       <img src="https://avatars.githubusercontent.com/u/207567094?v=4" width="96" height="96" style="border-radius:50%" alt="Fernando Salazar" /><br>
       <strong>Jose Maraboli</strong><br>
       <sub>Documentation & QA</sub><br>
-      <a href="mailto:f.salazarcartes@uandresbello.edu">Email</a>
+      <a href="mailto:j.marabolileal@uandresbello.edu">Email</a>
     </td>
   </tr>
 </table>
