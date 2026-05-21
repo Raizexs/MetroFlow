@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-MODEL_NAME = "yolov8n.pt"
+MODEL_NAME = "yolo11m.pt"      # yolo11m para multitudes; alternativa yolov8n.pt
 PERSON_CLASS_ID = 0  # COCO: person
-CONF_THRESHOLD = 0.5
+CONF_THRESHOLD = 0.25  # más bajo para capturar personas semi-ocultas en aglomeraciones
 
 DEFAULT_VAGON_ID = "vagon_1"
 DEFAULT_CAPACITY = 50

@@ -75,8 +75,8 @@ MODEL_FAMILIES = {
     "v11": {"prefix": "yolo11", "sizes": ["n", "s", "m", "l", "x"]},
 }
 MODEL_KEYS = list(MODEL_FAMILIES.keys())
-DEFAULT_FAMILY = "v8"
-DEFAULT_SIZE_IDX = 0  # n
+DEFAULT_FAMILY = "v11"
+DEFAULT_SIZE_IDX = 2  # m (yolo11m — mejor equilibrio precisión/velocidad para multitudes)
 
 
 def current_model(family: str, size_idx: int) -> str:
@@ -124,8 +124,8 @@ def render_list(images: list[Path], selected: int, info: str, threshold: float, 
     print("-" * 60)
     print(f"  {info}")
     print("-" * 60)
-    print("  [↑/↓] Navegar  |  [a] Analizar + ventana  |  [d] Solo ventana")
-    print("  [   [/]  ]  Bajar/subir confianza (step 0.05)")
+    print("  [↑/↓] Navegar  |  [z] Analizar + ventana  |  [x] Solo ventana")
+    print("  [a] Bajar confianza  |  [d] Subir confianza  (step 0.05)")
     print("  [m] Talla n/s/m/l/x  |  [y] Familia YOLOv8/YOLO11  |  [r] Reset confianza")
     print("=" * 60)
 
@@ -189,12 +189,12 @@ def main() -> int:
             print("Saliste del navegador.")
             break
 
-        if key == b"]":
+        if key in (b"d", b"D"):
             threshold = min(1.0, threshold + 0.05)
             info = f"Confianza subida a {threshold:.2f}"
             continue
 
-        if key == b"[":
+        if key in (b"a", b"A"):
             threshold = max(0.05, threshold - 0.05)
             info = f"Confianza bajada a {threshold:.2f}"
             continue
@@ -225,7 +225,7 @@ def main() -> int:
             info = f"Familia cambiada a {model_label(model_name)}"
             continue
 
-        if key in (b"a", b"A"):
+        if key in (b"z", b"Z"):
             path = images[selected]
             info = f"Analizando {path.name} (confianza ≥ {threshold:.2f})..."
 
@@ -254,7 +254,7 @@ def main() -> int:
             )
             continue
 
-        if key in (b"d", b"D"):
+        if key in (b"x", b"X"):
             path = images[selected]
             img = cv2.imread(str(path))
             if img is None:
