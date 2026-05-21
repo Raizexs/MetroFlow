@@ -70,12 +70,27 @@ def draw_detections(frame: cv2.Mat, results, conf_threshold: float) -> tuple[cv2
     return frame, count
 
 
-MODEL_SIZES = ["n", "s", "m", "l", "x"]
+MODEL_FAMILIES = {
+    "v8": {"prefix": "yolov8", "sizes": ["n", "s", "m", "l", "x"]},
+    "v11": {"prefix": "yolo11", "sizes": ["n", "s", "m", "l", "x"]},
+}
+MODEL_KEYS = list(MODEL_FAMILIES.keys())
+DEFAULT_FAMILY = "v8"
+DEFAULT_SIZE_IDX = 0  # n
+
+
+def current_model(family: str, size_idx: int) -> str:
+    info = MODEL_FAMILIES[family]
+    return f"{info['prefix']}{info['sizes'][size_idx]}.pt"
 
 
 def model_label(model_name: str) -> str:
-    size = model_name.replace("yolov8", "").replace(".pt", "")
-    return f"YOLOv8{size}"
+    for info in MODEL_FAMILIES.values():
+        prefix = info["prefix"]
+        if model_name.startswith(prefix):
+            size = model_name.replace(prefix, "").replace(".pt", "")
+            return f"{prefix.upper()}{size}"
+    return model_name.replace(".pt", "")
 
 
 def render_list(images: list[Path], selected: int, info: str, threshold: float, model_name: str) -> None:
@@ -86,7 +101,7 @@ def render_list(images: list[Path], selected: int, info: str, threshold: float, 
     print(f"  Directorio: {images[0].parent}")
     print(f"  Total fotos: {len(images)}")
     print(f"  Confianza: \033[33m{threshold:.2f}\033[0m  ([/] para ajustar)")
-    print(f"  Modelo:    \033[36m{model_label(model_name)}\033[0m  ([m] para cambiar)")
+    print(f"  Modelo:    \033[36m{model_label(model_name)}\033[0m  ([m] talla  |  [y] familia)")
     print("-" * 60)
 
     for i, img in enumerate(images):
@@ -111,7 +126,7 @@ def render_list(images: list[Path], selected: int, info: str, threshold: float, 
     print("-" * 60)
     print("  [↑/↓] Navegar  |  [a] Analizar + ventana  |  [d] Solo ventana")
     print("  [   [/]  ]  Bajar/subir confianza (step 0.05)")
-    print("  [m] Modelo n/s/m/l/x  |  [r] Reset confianza  |  [q/ESC] Salir")
+    print("  [m] Talla n/s/m/l/x  |  [y] Familia YOLOv8/YOLO11  |  [r] Reset confianza")
     print("=" * 60)
 
 
@@ -142,7 +157,9 @@ def main() -> int:
         print(f"No se encontraron imágenes en: {args.dir}")
         return 1
 
-    model_name = MODEL_NAME
+    family = DEFAULT_FAMILY
+    size_idx = DEFAULT_SIZE_IDX
+    model_name = current_model(family, size_idx)
     sys.stdout.write(f"Cargando {model_label(model_name)}...\n")
     sys.stdout.flush()
     detector = PersonDetector(model_name)
@@ -188,17 +205,24 @@ def main() -> int:
             continue
 
         if key in (b"m", b"M"):
-            current_size = model_name.replace("yolov8", "").replace(".pt", "")
-            try:
-                idx = MODEL_SIZES.index(current_size)
-            except ValueError:
-                idx = 0
-            next_idx = (idx + 1) % len(MODEL_SIZES)
-            model_name = f"yolov8{MODEL_SIZES[next_idx]}.pt"
+            sizes = MODEL_FAMILIES[family]["sizes"]
+            size_idx = (size_idx + 1) % len(sizes)
+            model_name = current_model(family, size_idx)
             info = f"Cambiando a {model_label(model_name)}..."
             render_list(images, selected, info, threshold, model_name)
             detector = PersonDetector(model_name)
-            info = f"Modelo cambiado a {model_label(model_name)}"
+            info = f"Talla cambiada a {model_label(model_name)}"
+            continue
+
+        if key in (b"y", b"Y"):
+            idx = MODEL_KEYS.index(family)
+            family = MODEL_KEYS[(idx + 1) % len(MODEL_KEYS)]
+            size_idx = min(size_idx, len(MODEL_FAMILIES[family]["sizes"]) - 1)
+            model_name = current_model(family, size_idx)
+            info = f"Cambiando a {model_label(model_name)}..."
+            render_list(images, selected, info, threshold, model_name)
+            detector = PersonDetector(model_name)
+            info = f"Familia cambiada a {model_label(model_name)}"
             continue
 
         if key in (b"a", b"A"):
