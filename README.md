@@ -74,6 +74,60 @@ python -m venv .venv
 python edge_ingestor.py --api http://localhost:8000 --max-frames 90 --stride 10
 ```
 
+## Pruebas de Detección (Dev Tools)
+
+Dos herramientas en `ai/` para probar YOLOv8n con fotos o videos propios sin necesidad de levantar el stack completo.
+
+### 1. Navegador Interactivo — `dev_browser.py`
+
+Selector visual por consola. Escanea una carpeta, muestra las fotos y permite navegar y analizar con teclas.
+
+```powershell
+cd ai
+.\.venv\Scripts\python dev_browser.py --dir "C:\Users\...\fotos"
+```
+
+| Tecla | Acción |
+|-------|--------|
+| `↑` / `↓` | Navegar entre fotos |
+| `a` | Analizar con YOLO (guarda en `_detectado/` + abre ventana) |
+| `d` | Abrir ventana con detecciones (sin guardar) |
+| `[` / `]` | Bajar/subir umbral de confianza (step 0.05) |
+| `m` | Cambiar modelo: `n` → `s` → `m` → `l` → `x` (de rápido a preciso) |
+| `r` | Resetear confianza a 0.50 |
+| `q` / `ESC` | Salir |
+
+La ventana de resultado se redimensiona automáticamente a 1280×800 manteniendo la relación de aspecto. El título muestra el modelo usado, el umbral de confianza y el conteo de personas detectadas.
+
+### 2. CLI Directa — `detect_media.py`
+
+Para ejecuciones rápidas sin interfaz interactiva:
+
+```powershell
+cd ai
+.\.venv\Scripts\python detect_media.py --image ruta\foto.jpg --show
+.\.venv\Scripts\python detect_media.py --video ruta\video.mp4 --output resultados
+.\.venv\Scripts\python detect_media.py --dir ruta\carpeta --show
+```
+
+Flags disponibles: `--show` (ventana emergente), `--output` (carpeta de guardado), `--max-frames` (límite para video), `--threshold` (confianza mínima).
+
+### Pipeline Completo (IA → Backend → Dashboard)
+
+```powershell
+# 1. Prender PostgreSQL + API
+docker compose up -d
+
+# 2. Activar venv del backend
+cd backend
+.\.venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --port 8000
+
+# 3. Ejecutar detección con push a la API
+cd ..\ai
+.\.venv\Scripts\python demo_yolo.py --video ruta\video.mp4 --push-api http://localhost:8000 --show
+```
+
 ## Environment Variables
 
 | Variable | Capa | Descripción |
@@ -87,7 +141,7 @@ Plantilla: [`.env.example`](.env.example).
 ## Project Structure
 
 ```
-├── ai/           # YOLO, ingestor edge, contratos JSON
+├── ai/           # YOLO, ingestor edge, contratos JSON, dev tools
 ├── backend/      # FastAPI, modelos, repositorio
 ├── frontend/     # Dashboard React
 ├── docs/         # Arquitectura, API, despliegue, guías
