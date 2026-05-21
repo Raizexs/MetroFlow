@@ -1,11 +1,17 @@
-// Capa SaaS: único cliente HTTP hacia el PaaS (VITE_API_URL). Sin lógica de IA ni SQL.
+// Capa SaaS: único cliente HTTP hacia el PaaS. Sin lógica de IA ni SQL.
+
 import type {
   OccupationHistoryResponse,
   OccupationResponse,
   StatusResponse,
 } from "../types/occupation";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+function normalizeApiBase(raw: string | undefined): string {
+  const base = (raw ?? "http://localhost:8000").trim();
+  return base.replace(/\/+$/, "");
+}
+
+const API_URL = normalizeApiBase(import.meta.env.VITE_API_URL);
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
