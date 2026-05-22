@@ -27,7 +27,6 @@ runs/
 weights/
 
 # Test videos (keep folder via .gitkeep)
-ai/videos/*.mp4
 ai/videos/*.avi
 ai/videos/*.mov
 ai/videos/*.mkv
