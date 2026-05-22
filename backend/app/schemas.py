@@ -1,8 +1,6 @@
 """Modelos Pydantic — espejo de ai/schemas.py OccupationSnapshot.to_mock_dict()."""
 
-from __future__ import annotations
-
-from typing import Literal
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -24,8 +22,8 @@ class AnalyzePayload(BaseModel):
 
     zone_id: str
     headcount: int = Field(ge=0)
-    status: OccupationStatusLiteral | None = None
-    timestamp: str | None = None
+    status: Optional[OccupationStatusLiteral] = None
+    timestamp: Optional[str] = None
 
 
 class HistoryPoint(BaseModel):
@@ -36,4 +34,4 @@ class HistoryPoint(BaseModel):
 
 class OccupationHistoryResponse(BaseModel):
     vagon_id: str
-    points: list[HistoryPoint]
+    points: List[HistoryPoint]
