@@ -1,181 +1,111 @@
 # MetroFlow
 
-![Status](https://img.shields.io/badge/estado-en%20desarrollo-neutral)
+![Status](https://img.shields.io/badge/estado-production-success)
 ![Version](https://img.shields.io/badge/version-0.2.0-blue)
-![Python](https://img.shields.io/badge/python-3.11+-3776AB)
+![Python](https://img.shields.io/badge/python-3.10+-3776AB)
 ![React](https://img.shields.io/badge/react-19-61DAFB)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.11+-009688)
-![Deploy](https://img.shields.io/badge/despliegue-Vercel%20%7C%20Render-000000)
+![License](https://img.shields.io/badge/licencia-propietaria-lightgrey)
+![Deploy](https://img.shields.io/badge/deploy-Vercel%20%7C%20Render-000000)
 
-Sistema de monitoreo de aforo para transporte masivo basado en visión artificial en el borde, API REST y panel operativo en la nube. Estima la ocupación por vagón sin sensores físicos dedicados y transmite únicamente métricas agregadas. Dirigido a equipos de operación, integración TI y evaluación de arquitecturas cloud en capas (SaaS, PaaS, IaaS).
+MetroFlow estima la ocupación en andén y vagón mediante visión artificial en el borde y expone el resultado en un panel operativo en la nube. Resuelve el monitoreo de aforo sin sensores dedicados ni transmisión de video. Está orientado a operación de transporte masivo, equipos de integración y evaluación de arquitecturas IaaS, PaaS y SaaS.
 
 ## Overview
 
-MetroFlow separa inferencia (edge), lógica de negocio (API) y visualización (dashboard). Un ingestor local ejecuta YOLOv8 sobre video o cámara y envía conteos anonimizados al backend; el frontend consulta el estado cada cinco segundos.
+El sistema separa inferencia local (edge), lógica de negocio (API) y visualización (dashboard). El ingestor envía telemetría anonimizada (`headcount`, estado de aforo) al backend; el frontend consulta la API cada seis segundos durante la detención del tren en andén.
+
+| Capa | Componente | Producción |
+|------|------------|------------|
+| SaaS | Dashboard | https://frontend-green-xi-68.vercel.app |
+| PaaS | API / OpenAPI | https://ocupacion-api.onrender.com · `/docs` |
+| IaaS | PostgreSQL | Render (acceso interno) |
+| Edge | YOLO + ingestor | Estación / `ai/` |
+
+En Vercel: directorio raíz `frontend`, variable `VITE_API_URL` apuntando al API de Render (sin barra final).
 
 ## Core Features
 
-- Detección de personas con YOLOv8n (clase COCO, umbral de confianza configurable).
-- Ingesta edge con muestreo de frames y `POST` hacia `/api/v1/analyze`.
-- API FastAPI con ocupación actual, historial y OpenAPI en `/docs`.
-- Dashboard React con KPIs, esquema de vagón, alertas por umbral y gráfico de historial.
-- Persistencia opcional en PostgreSQL; degradación a memoria si la base no está disponible.
-- Despliegue documentado en Vercel (UI) y Render (API + base de datos).
+- Detección y seguimiento de personas (YOLO11, ByteTrack) con línea virtual de cruce
+- Ingestor edge hacia `POST /api/v1/analyze` (modo demo o inferencia en video)
+- API REST: ocupación actual, historial y documentación OpenAPI
+- Dashboard con KPIs, densidad referenciada a frecuencia EFE y estado de telemetría activa
+- Persistencia en PostgreSQL con respaldo en memoria
+- Despliegue en Vercel y Render
 
 ## Tech Stack
 
 | Tecnología | Propósito |
 |------------|-----------|
-| Python 3.11+, Ultralytics, OpenCV | Inferencia y edge ingestor |
-| FastAPI, Uvicorn, SQLAlchemy, asyncpg | API y persistencia |
-| React 19, TypeScript, Vite, Tailwind, Recharts | Panel operativo |
-| PostgreSQL 16 | Series de tiempo de ocupación |
-| Docker Compose | Entorno local API + base de datos |
-| Vercel / Render | SaaS y PaaS/IaaS en producción |
+| Python, Ultralytics, OpenCV | Inferencia e ingestor edge |
+| FastAPI, SQLAlchemy, asyncpg | API y persistencia |
+| React, TypeScript, Vite, Tailwind | Panel operativo |
+| PostgreSQL | Historial de ocupación |
+| Docker Compose | Entorno local |
+| Vercel / Render | SaaS y PaaS / IaaS |
 
 ## Getting Started
 
-**Requisitos:** Node.js 20+, Python 3.11+, Docker (opcional, recomendado para historial).
+**Requisitos:** Node.js 20+, Python 3.10+, Docker (opcional).
 
 ```powershell
-# API y PostgreSQL (Docker)
-
 docker compose up -d
 
-# API sin Docker
-
 cd backend
-python -m venv .venv
+py -3.14 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-# Dashboard
-
-cd frontend
+cd ..\frontend
 npm install
 npm run dev
 ```
 
-URLs locales: API `http://localhost:8000`, 
-documentación `http://localhost:8000/docs`, 
-UI `http://localhost:5173`.
+Local: API `http://localhost:8000` · UI `http://localhost:5173`
 
 ```powershell
-# Verificación de endpoints
-
 .\scripts\verify-rubric.ps1 -ApiUrl http://localhost:8000
 
-# Demo edge → API (requiere venv en ai/ y video en ai/videos/sample.mp4)
-
 cd ai
-python -m venv .venv
 .\.venv\Scripts\pip install -r requirements.txt
-python edge_ingestor.py --api http://localhost:8000 --max-frames 90 --stride 10
+.\.venv\Scripts\python edge_ingestor.py --preset efe --api https://ocupacion-api.onrender.com
 ```
 
-## Pruebas de Detección (Dev Tools)
-
-### Scripts Rápidos para Multitudes
-
-Dos scripts headless pensados para conteo en alta densidad (vagón de metro). Retornan JSON limpio, ideales para integrar en API:
-
-```powershell
-cd ai
-.\.venv\Scripts\python crowd_counter.py ruta\foto.jpg
-# → {"status": "success", "headcount": 42}
-
-.\.venv\Scripts\python crowd_counter_sahi.py ruta\foto.jpg
-# → {"status": "success", "headcount": 48}  (SAHI: más preciso en oclusión)
-```
-
-| Script | Técnica | imgsz | conf | iou |
-|--------|---------|-------|------|-----|
-| `crowd_counter.py` | YOLOv8n directo | 1280 | 0.25 | 0.7 |
-| `crowd_counter_sahi.py` | YOLOv8n + SAHI (sliced) | slice 640 | 0.25 | 0.7 (IOS) |
-
-Ambos exportan `analyze_crowd(image_path)` para importar desde FastAPI.
-
-### Navegador Interactivo
-
-### 1. Navegador Interactivo — `dev_browser.py`
-
-Selector visual por consola. Escanea una carpeta, muestra las fotos y permite navegar y analizar con teclas.
-
-```powershell
-cd ai
-.\.venv\Scripts\python dev_browser.py --dir "C:\Users\...\fotos"
-```
-
-| Tecla | Acción |
-|-------|--------|
-| `↑` / `↓` | Navegar entre fotos |
-| `a` | Analizar con YOLO (guarda en `_detectado/` + abre ventana) |
-| `d` | Abrir ventana con detecciones (sin guardar) |
-| `[` / `]` | Bajar/subir umbral de confianza (step 0.05) |
-| `m` | Cambiar modelo: `n` → `s` → `m` → `l` → `x` (de rápido a preciso) |
-| `r` | Resetear confianza a 0.50 |
-| `q` / `ESC` | Salir |
-
-La ventana de resultado se redimensiona automáticamente a 1280×800 manteniendo la relación de aspecto. El título muestra el modelo usado, el umbral de confianza y el conteo de personas detectadas.
-
-### 2. CLI Directa — `detect_media.py`
-
-Para ejecuciones rápidas sin interfaz interactiva:
-
-```powershell
-cd ai
-.\.venv\Scripts\python detect_media.py --image ruta\foto.jpg --show
-.\.venv\Scripts\python detect_media.py --video ruta\video.mp4 --output resultados
-.\.venv\Scripts\python detect_media.py --dir ruta\carpeta --show
-```
-
-Flags disponibles: `--show` (ventana emergente), `--output` (carpeta de guardado), `--max-frames` (límite para video), `--threshold` (confianza mínima).
-
-### Pipeline Completo (IA → Backend → Dashboard)
-
-```powershell
-# 1. Prender PostgreSQL + API
-docker compose up -d
-
-# 2. Activar venv del backend
-cd backend
-.\.venv\Scripts\Activate.ps1
-uvicorn app.main:app --reload --port 8000
-
-# 3. Ejecutar detección con push a la API
-cd ..\ai
-.\.venv\Scripts\python demo_yolo.py --video ruta\video.mp4 --push-api http://localhost:8000 --show
-```
+Modo `--live` ejecuta inferencia real sobre el video EFE; por defecto el preset envía un guión de abordaje aleatorio (POST cada 6 s, ventana 20–40 s). Overlay y exportación: `metro_demo_video.py --preset efe`.
 
 ## Environment Variables
 
 | Variable | Capa | Descripción |
 |----------|------|-------------|
-| `DATABASE_URL` | Backend | URL async (`postgresql+asyncpg://...`). En Render, convertir `postgres://` al prefijo indicado. |
-| `CORS_EXTRA_ORIGIN` | Backend | Origen del dashboard en producción (URL de Vercel). |
-| `VITE_API_URL` | Frontend | URL pública del API en build (Vercel). |
+| `DATABASE_URL` | Backend | `postgresql+asyncpg://...` |
+| `CORS_EXTRA_ORIGIN` | Backend | Origen del dashboard (Vercel) |
+| `VITE_API_URL` | Frontend | URL del API en build |
 
-Plantilla: [`.env.example`](.env.example).
+Ver [`.env.example`](.env.example).
 
 ## Project Structure
 
 ```
-├── ai/           # YOLO, ingestor edge, contratos JSON, dev tools
-├── backend/      # FastAPI, modelos, repositorio
-├── frontend/     # Dashboard React
-├── docs/         # Arquitectura, API, despliegue, guías
-└── scripts/      # Arranque local, verificación, demo integrada
+├── ai/           # Inferencia, ingestor, presets de video
+├── backend/      # API FastAPI
+├── frontend/     # Dashboard (raíz de Vercel)
+├── docs/         # Documentación técnica y evidencias
+├── scripts/      # Verificación y demos
+└── render.yaml   # Blueprint Render
 ```
 
 ## Roadmap
 
-- Inferencia ONNX en el contenedor de API.
-- Tracking persistente (DeepSORT) en servidor.
-- Ingesta RTSP e imágenes por lote en el ingestor edge.
+- Ingesta RTSP y procesamiento por lote en edge
+- Campo de última actualización en la API de ocupación
+- Exportación ONNX en el servicio de API (opcional)
+
+## License
+
+Todos los derechos reservados. Uso y redistribución restringidos sin autorización escrita de los titulares.
 
 ## Authors
-Proyecto académico — Infraestructura TI. 
+
+Proyecto académico — Infraestructura TI.
 
 <table>
   <tr>
@@ -183,7 +113,7 @@ Proyecto académico — Infraestructura TI.
       <img src="https://avatars.githubusercontent.com/u/105559567?v=4" width="96" height="96" style="border-radius:50%" alt="Andres Tapia" /><br>
       <strong>Andrés Tapia</strong><br>
       <sub>Technical Lead</sub><br>
-      <a href="mailto:a.tapialpez@uandresbello.edu">Email</a>
+      <a href="mailto:a.tapialopez@uandresbello.edu">Email</a>
     </td>
     <td align="center" width="20%">
       <img src="https://avatars.githubusercontent.com/u/128178198?v=4" width="96" height="96" style="border-radius:50%" alt="Lukas Flores" /><br>
@@ -211,9 +141,3 @@ Proyecto académico — Infraestructura TI.
     </td>
   </tr>
 </table>
-
-## License
-
-All rights reserved.
-
-This project is proprietary. No part of this repository may be copied, modified, distributed, sublicensed, or used for commercial purposes without prior written permission from the project owners.
