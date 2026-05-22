@@ -5,6 +5,35 @@
 @layer base {
   body {
     @apply min-h-screen bg-metro-bg font-sans text-slate-100 antialiased;
-    background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(14, 165, 233, 0.12), transparent);
+    background-image:
+      radial-gradient(ellipse 90% 55% at 50% -15%, rgba(14, 165, 233, 0.14), transparent),
+      radial-gradient(ellipse 50% 40% at 100% 50%, rgba(139, 92, 246, 0.06), transparent);
+  }
+
+  ::selection {
+    @apply bg-sky-500/30 text-white;
+  }
+}
+
+@layer utilities {
+  .page-enter {
+    animation: page-fade 0.35s ease-out;
+  }
+
+  @keyframes page-fade {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .page-enter {
+      animation: none;
+    }
   }
 }

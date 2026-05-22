@@ -1,33 +1,51 @@
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+
+import { useAnimatedValue } from "../hooks/useAnimatedValue";
 import type { OccupationResponse } from "../types/occupation";
 import { VAGON_CAPACITY } from "../types/occupation";
+import { prefersReducedMotion } from "../lib/motion";
 
 interface KpiStripProps {
   data: OccupationResponse;
+  delta?: number;
 }
 
-export function KpiStrip({ data }: KpiStripProps) {
+export function KpiStrip({ data, delta = 0 }: KpiStripProps) {
+  const animatedCount = useAnimatedValue(data.headcount);
   const pct = Math.min(100, Math.round((data.headcount / VAGON_CAPACITY) * 100));
+  const stripRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (prefersReducedMotion() || delta === 0 || !stripRef.current) return;
+      gsap.fromTo(
+        stripRef.current,
+        { boxShadow: "0 0 0 rgba(14,165,233,0)" },
+        {
+          boxShadow: "0 0 28px rgba(14,165,233,0.35)",
+          duration: 0.35,
+          yoyo: true,
+          repeat: 1,
+        },
+      );
+    },
+    { dependencies: [delta], scope: stripRef },
+  );
 
   const kpis = [
     {
-      label: "Pasajeros detectados",
-      value: String(data.headcount),
-      sub: "conteo IA anonimizado",
-      icon: (
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
+      label: "Pasajeros en zona",
+      value: String(animatedCount),
+      sub: delta !== 0 ? `${delta > 0 ? "+" : ""}${delta} última lectura` : "conteo IA anonimizado",
+      icon: "users",
     },
     {
       label: "Ocupación",
       value: `${pct}%`,
       sub: `de ${VAGON_CAPACITY} plazas`,
-      icon: (
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      ),
+      icon: "chart",
     },
     {
       label: "Estado operativo",
@@ -38,28 +56,21 @@ export function KpiStrip({ data }: KpiStripProps) {
             ? "Advertencia"
             : "Crítico",
       sub: "semáforo de aforo",
-      icon: (
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
+      icon: "shield",
     },
   ];
 
   return (
-    <div className="mb-8 grid gap-4 sm:grid-cols-3">
+    <div ref={stripRef} className="grid gap-4 sm:grid-cols-3">
       {kpis.map((kpi) => (
         <div
           key={kpi.label}
-          className="group rounded-2xl border border-metro-border/80 bg-metro-panel/60 p-5 backdrop-blur-sm transition hover:border-metro-accent/30"
+          className="group rounded-2xl border border-metro-border/80 bg-gradient-to-br from-metro-panel/80 to-metro-panel/30 p-5 shadow-lg backdrop-blur-sm transition hover:border-sky-500/25"
         >
-          <div className="mb-3 flex items-center justify-between text-metro-accent">
-            {kpi.icon}
-          </div>
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
             {kpi.label}
           </p>
-          <p className="mt-1 text-3xl font-bold tabular-nums text-white transition-all duration-300">
+          <p className="mt-2 font-display text-4xl font-bold tabular-nums tracking-tight text-white">
             {kpi.value}
           </p>
           <p className="mt-1 text-xs text-slate-500">{kpi.sub}</p>

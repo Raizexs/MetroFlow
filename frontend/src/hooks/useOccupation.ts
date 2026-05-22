@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchOccupation } from "../api/client";
+import { DASHBOARD_POLL_MS, STALE_TELEMETRY_MS } from "../config/polling";
 import type { HistoryPoint, OccupationResponse } from "../types/occupation";
 
-const POLL_INTERVAL_MS = 5000;
+function snapshotKey(data: OccupationResponse): string {
+  return `${data.headcount}:${data.status}`;
+}
 
 export function useOccupation(vagonId: string) {
   const [data, setData] = useState<OccupationResponse | null>(null);
@@ -10,7 +13,12 @@ export function useOccupation(vagonId: string) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [lastTelemetryAt, setLastTelemetryAt] = useState<Date | null>(null);
+  const [telemetryActive, setTelemetryActive] = useState(false);
   const [historyBuffer, setHistoryBuffer] = useState<HistoryPoint[]>([]);
+  const [delta, setDelta] = useState(0);
+  const prevHeadcount = useRef<number | null>(null);
+  const prevSnapshot = useRef<string | null>(null);
 
   const load = useCallback(
     async (isInitial: boolean) => {
@@ -20,17 +28,30 @@ export function useOccupation(vagonId: string) {
 
       try {
         const result = await fetchOccupation(vagonId);
+        const key = snapshotKey(result);
+        const changed = prevSnapshot.current !== key;
+
+        if (changed) {
+          if (prevHeadcount.current !== null) {
+            setDelta(result.headcount - prevHeadcount.current);
+          }
+          setLastTelemetryAt(new Date());
+          setHistoryBuffer((prev) => {
+            const point: HistoryPoint = {
+              headcount: result.headcount,
+              status: result.status,
+              timestamp: new Date().toISOString(),
+            };
+            return [...prev, point].slice(-120);
+          });
+        } else {
+          setDelta(0);
+        }
+
+        prevSnapshot.current = key;
+        prevHeadcount.current = result.headcount;
         setData(result);
         setLastUpdated(new Date());
-        setHistoryBuffer((prev) => {
-          const point: HistoryPoint = {
-            headcount: result.headcount,
-            status: result.status,
-            timestamp: new Date().toISOString(),
-          };
-          const next = [...prev, point].slice(-30);
-          return next;
-        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error al cargar ocupación");
       } finally {
@@ -42,10 +63,33 @@ export function useOccupation(vagonId: string) {
   );
 
   useEffect(() => {
+    const evaluate = () => {
+      if (!lastTelemetryAt) {
+        setTelemetryActive(false);
+        return;
+      }
+      setTelemetryActive(Date.now() - lastTelemetryAt.getTime() < STALE_TELEMETRY_MS);
+    };
+    evaluate();
+    const id = window.setInterval(evaluate, 1000);
+    return () => window.clearInterval(id);
+  }, [lastTelemetryAt]);
+
+  useEffect(() => {
     void load(true);
-    const id = window.setInterval(() => void load(false), POLL_INTERVAL_MS);
+    const id = window.setInterval(() => void load(false), DASHBOARD_POLL_MS);
     return () => window.clearInterval(id);
   }, [load]);
 
-  return { data, loading, refreshing, error, lastUpdated, historyBuffer };
+  return {
+    data,
+    loading,
+    refreshing,
+    error,
+    lastUpdated,
+    lastTelemetryAt,
+    telemetryActive,
+    historyBuffer,
+    delta,
+  };
 }
