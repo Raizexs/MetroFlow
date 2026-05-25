@@ -14,6 +14,7 @@ from pathlib import Path
 import cv2
 
 from config import (
+    CONF_THRESHOLD,
     DEFAULT_EFE_LINE,
     DEFAULT_INFER_EVERY,
     DEFAULT_INSIDE_POSITIVE,
@@ -21,9 +22,11 @@ from config import (
     DEFAULT_PUSH_INTERVAL_SEC,
     DEFAULT_SAMPLE_FPS,
     DEFAULT_VAGON_ID,
+    INFER_IMGSZ,
+    MODEL_NAME,
 )
 from demo_timeline import EFE_DEMO_COOLDOWN_SEC, generate_random_dwell_schedule
-from demo_yolo import push_to_api, resolve_stride
+from demo_yolo import push_to_api
 from detector import PersonDetector
 from line_crossing import create_boundary_counter, parse_line_coords, parse_lines_coords
 from schemas import OccupationSnapshot
@@ -90,9 +93,17 @@ def ingest_video_live(
     train_on_right: bool,
     extra_lines: list[tuple[int, int, int, int]] | None,
     push_interval_sec: float,
+    infer_every: int,
+    model_name: str,
+    conf_threshold: float,
+    imgsz: int,
 ) -> int:
-    """YOLO + línea en video; un muestreo cada push_interval (reloj y línea de tiempo del clip)."""
-    detector = PersonDetector()
+    """YOLO + línea: inferencia frecuente (entradas/salidas) y POST al API cada ~push_interval."""
+    detector = PersonDetector(
+        model_name,
+        conf_threshold=conf_threshold,
+        imgsz=imgsz,
+    )
     cap = cv2.VideoCapture(str(source))
     if not cap.isOpened():
         logger.error("No se pudo abrir: %s", source)
@@ -113,11 +124,21 @@ def ingest_video_live(
         logger.info("Modo línea (%s): en_zona desde YOLO", "perspectiva" if perspective else "semiplano")
 
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    stride = max(1, round(fps * push_interval_sec)) if push_interval_sec > 0 else 1
+    infer_step = max(1, infer_every)
+    api_stride = max(1, round(fps * push_interval_sec)) if push_interval_sec > 0 else 1
     frame_index = 0
     pushed = 0
+    last_headcount = 0
 
-    logger.info("Video %.1f fps · stride=%s (~%.1f s de clip por POST)", fps, stride, stride / fps)
+    logger.info(
+        "Video %.1f fps · infer cada %s frames · POST cada %s frames (~%.1f s) · modelo %s conf=%.2f",
+        fps,
+        infer_step,
+        api_stride,
+        api_stride / fps,
+        model_name,
+        conf_threshold,
+    )
 
     while True:
         if max_frames is not None and frame_index >= max_frames:
@@ -126,23 +147,43 @@ def ingest_video_live(
         if not ok:
             break
 
-        if frame_index % stride == 0:
+        run_infer = frame_index % infer_step == 0
+        if run_infer:
             if mode == "line" and counter is not None:
                 result = detector.detect_and_track(frame)
                 tracks = detector.extract_tracks(result)
-                counter.update(tracks)
-                headcount = counter.in_zone
-                logger.info(
-                    "Frame %s: en_zona=%s (ent=%s sal=%s) → API",
-                    frame_index,
-                    headcount,
-                    counter.entries,
-                    counter.exits,
-                )
+                event = counter.update(tracks)
+                last_headcount = counter.in_zone
+                if event:
+                    label = "ENTRADA" if event.kind == "entry" else "SALIDA"
+                    logger.info(
+                        "+%s (id #%s) | entradas=%s salidas=%s en_zona=%s",
+                        label,
+                        event.track_id,
+                        counter.entries,
+                        counter.exits,
+                        counter.in_zone,
+                    )
             else:
-                headcount = detector.count(frame)
-                logger.info("Frame %s: %s personas → API", frame_index, headcount)
+                last_headcount = detector.count(frame, track=True)
 
+        if frame_index % api_stride == 0:
+            if mode == "line" and counter is not None:
+                headcount = counter.in_zone
+            elif run_infer:
+                headcount = last_headcount
+            else:
+                headcount = detector.count(frame, track=True)
+            logger.info(
+                "Frame %s → API headcount=%s%s",
+                frame_index,
+                headcount,
+                (
+                    f" (ent={counter.entries} sal={counter.exits})"
+                    if counter is not None
+                    else ""
+                ),
+            )
             snapshot = OccupationSnapshot.from_detection(
                 vagon_id=zone_id,
                 headcount=headcount,
@@ -158,6 +199,13 @@ def ingest_video_live(
         frame_index += 1
 
     cap.release()
+    if counter is not None:
+        logger.info(
+            "Resumen línea: entradas=%s salidas=%s en_zona(final)=%s",
+            counter.entries,
+            counter.exits,
+            counter.in_zone,
+        )
     logger.info("Ingesta finalizada: %s frames leídos, %s POSTs", frame_index, pushed)
     return 0
 
@@ -187,6 +235,9 @@ def main() -> int:
     parser.add_argument("--perspective", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--train-on-right", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--infer-every", type=int, default=None)
+    parser.add_argument("--model", default=None, help="Pesos YOLO (default preset o yolo11m.pt)")
+    parser.add_argument("--conf", type=float, default=None, help="Umbral confianza (default preset o 0.4)")
+    parser.add_argument("--imgsz", type=int, default=None, help="Tamaño inferencia (default 1280)")
     parser.add_argument(
         "--inside-positive",
         action=argparse.BooleanOptionalAction,
@@ -224,6 +275,12 @@ def main() -> int:
             args.train_on_right = preset.train_on_right
         if args.infer_every is None:
             args.infer_every = preset.infer_every
+        if args.model is None:
+            args.model = preset.model
+        if args.conf is None:
+            args.conf = preset.conf
+        if args.imgsz is None:
+            args.imgsz = preset.imgsz
         if args.extra_lines is None and preset.extra_lines:
             args.extra_lines = preset.extra_lines
         if args.sample_fps is None and preset.sample_fps is not None:
@@ -243,6 +300,12 @@ def main() -> int:
         args.train_on_right = True
     if args.infer_every is None:
         args.infer_every = DEFAULT_INFER_EVERY
+    if args.model is None:
+        args.model = MODEL_NAME
+    if args.conf is None:
+        args.conf = CONF_THRESHOLD
+    if args.imgsz is None:
+        args.imgsz = INFER_IMGSZ
     if args.sample_fps is None:
         args.sample_fps = DEFAULT_SAMPLE_FPS
     if args.push_interval is None:
@@ -273,7 +336,11 @@ def main() -> int:
         if args.extra_lines:
             extra = parse_lines_coords(args.extra_lines)
 
-    logger.info("Modo live YOLO · POST cada %.1f s", args.push_interval)
+    logger.info(
+        "Modo live YOLO · infer cada %s frames · POST cada %.1f s",
+        args.infer_every,
+        args.push_interval,
+    )
     return ingest_video_live(
         source=args.source.resolve(),
         api_base=args.api,
@@ -287,6 +354,10 @@ def main() -> int:
         train_on_right=args.train_on_right,
         extra_lines=extra or None,
         push_interval_sec=max(0.0, args.push_interval),
+        infer_every=args.infer_every,
+        model_name=args.model,
+        conf_threshold=args.conf,
+        imgsz=args.imgsz,
     )
 
 
