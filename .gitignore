@@ -33,4 +33,4 @@ ai/videos/*.mkv
 ai/README.md
 
 # Documentation
-docs/
+docs/*.md
