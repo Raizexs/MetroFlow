@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/python-3.10+-3776AB)
 ![React](https://img.shields.io/badge/react-19-61DAFB)
 ![License](https://img.shields.io/badge/licencia-propietaria-lightgrey)
-![Deploy](https://img.shields.io/badge/deploy-Vercel%20%7C%20Render-000000)
+![Deploy](https://img.shields.io/badge/deploy-Vercel%20%7C%20Render%20%7C%20EC2-000000)
 
 MetroFlow estima la ocupación en andén y vagón mediante visión artificial en el borde y expone el resultado en un panel operativo en la nube. Resuelve el monitoreo de aforo sin sensores dedicados ni transmisión de video. Está orientado a operación de transporte masivo, equipos de integración y evaluación de arquitecturas IaaS, PaaS y SaaS.
 
@@ -16,11 +16,9 @@ El sistema separa inferencia local (edge), lógica de negocio (API) y visualizac
 | Capa | Componente | Producción |
 |------|------------|------------|
 | SaaS | Dashboard | https://frontend-green-xi-68.vercel.app |
-| PaaS | API / OpenAPI | https://ocupacion-api.onrender.com · `/docs` |
-| IaaS | PostgreSQL | Render (acceso interno) |
+| PaaS | API / OpenAPI | https://ocupacion-api.onrender.com |
+| IaaS | PostgreSQL | AWS EC2 |
 | Edge | YOLO + ingestor | Estación / `ai/` |
-
-En Vercel: directorio raíz `frontend`, variable `VITE_API_URL` apuntando al API de Render (sin barra final).
 
 ## Core Features
 
@@ -29,7 +27,7 @@ En Vercel: directorio raíz `frontend`, variable `VITE_API_URL` apuntando al API
 - API REST: ocupación actual, historial y documentación OpenAPI
 - Dashboard con KPIs, densidad referenciada a frecuencia EFE y estado de telemetría activa
 - Persistencia en PostgreSQL con respaldo en memoria
-- Despliegue en Vercel y Render
+- Despliegue en Vercel (SaaS), Render (PaaS) y AWS EC2 (IaaS)
 
 ## Tech Stack
 
@@ -40,7 +38,7 @@ En Vercel: directorio raíz `frontend`, variable `VITE_API_URL` apuntando al API
 | React, TypeScript, Vite, Tailwind | Panel operativo |
 | PostgreSQL | Historial de ocupación |
 | Docker Compose | Entorno local |
-| Vercel / Render | SaaS y PaaS / IaaS |
+| Vercel / Render / AWS EC2 | SaaS, PaaS e IaaS |
 
 ## Getting Started
 
@@ -72,33 +70,16 @@ cd ai
 
 Modo `--live` ejecuta inferencia real sobre el video EFE; por defecto el preset envía un guión de abordaje aleatorio (POST cada 6 s, ventana 20–40 s). Overlay y exportación: `metro_demo_video.py --preset efe`.
 
-## Environment Variables
-
-| Variable | Capa | Descripción |
-|----------|------|-------------|
-| `DATABASE_URL` | Backend | `postgresql+asyncpg://...` |
-| `CORS_EXTRA_ORIGIN` | Backend | Origen del dashboard (Vercel) |
-| `VITE_API_URL` | Frontend | URL del API en build |
-
-Ver [`.env.example`](.env.example).
-
 ## Project Structure
 
 ```
 ├── ai/           # Inferencia, ingestor, presets de video
 ├── backend/      # API FastAPI
 ├── frontend/     # Dashboard (raíz de Vercel)
-├── docs/         # Documentación técnica y evidencias
+├── docs/         # Documentación técnica
 ├── scripts/      # Verificación y demos
-└── render.yaml   # Blueprint Render
+└── render.yaml   # Blueprint Render (solo API PaaS)
 ```
-
-## Roadmap
-
-- Ingesta RTSP y procesamiento por lote en edge
-- Campo de última actualización en la API de ocupación
-- Exportación ONNX en el servicio de API (opcional)
-
 ## License
 
 Todos los derechos reservados. Uso y redistribución restringidos sin autorización escrita de los titulares.
