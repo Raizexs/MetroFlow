@@ -11,7 +11,7 @@ from sqlalchemy.orm import DeclarativeBase
 logger = logging.getLogger(__name__)
 
 def _normalize_database_url(url: str) -> str:
-    """Render entrega postgres://; SQLAlchemy async requiere postgresql+asyncpg://."""
+    """Proveedores suelen entregar postgres://; SQLAlchemy async requiere postgresql+asyncpg://."""
     if url.startswith("postgres://"):
         return "postgresql+asyncpg://" + url[len("postgres://") :]
     if url.startswith("postgresql://") and "+asyncpg" not in url:
@@ -37,7 +37,12 @@ class Base(DeclarativeBase):
 
 def init_db() -> None:
     global engine, async_session_factory
-    engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=False,
+        pool_pre_ping=True,
+        connect_args={"timeout": 15},
+    )
     async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
 
@@ -53,7 +58,11 @@ async def setup_tables() -> bool:
         return True
     except Exception as exc:
         db_enabled = False
-        logger.warning("PostgreSQL no disponible, usando solo RAM: %s", exc)
+        logger.warning(
+            "PostgreSQL no disponible, usando solo RAM: %s: %r",
+            type(exc).__name__,
+            exc,
+        )
         return False
 
 
