@@ -30,8 +30,8 @@ const LAYERS = [
   {
     id: "paas",
     tag: "PaaS · API",
-    title: "FastAPI + PostgreSQL",
-    detail: "Telemetría anonimizada (Render)",
+    title: "FastAPI (Render)",
+    detail: "Telemetría → Postgres en EC2 (IaaS)",
     color: "from-sky-500/20 to-cyan-600/5",
     ring: "ring-sky-500/30",
     dot: "#38bdf8",

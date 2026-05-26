@@ -16,7 +16,7 @@ const STEPS = [
   {
     step: "02",
     title: "Telemetría (PaaS)",
-    body: "edge_ingestor envía JSON ligero (headcount, estado) a FastAPI en Render. PostgreSQL guarda historial; sin imágenes ni identidad.",
+    body: "edge_ingestor envía JSON ligero (headcount, estado) a FastAPI en Render (PaaS). PostgreSQL en AWS EC2 (IaaS) guarda historial; sin imágenes ni identidad.",
     accent: "border-sky-500/40 bg-sky-500/10",
   },
   {
