@@ -1,3 +1,5 @@
+# Blueprint Render: solo PaaS (API). PostgreSQL vive en AWS EC2 (IaaS).
+# Definir DATABASE_URL manualmente en el dashboard apuntando a EC2.
 services:
   - type: web
     name: ocupacion-api
@@ -7,14 +9,6 @@ services:
     plan: free
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: ocupacion-db
-          property: connectionString
+        sync: false
       - key: CORS_EXTRA_ORIGIN
         sync: false
-
-databases:
-  - name: ocupacion-db
-    plan: free
-    databaseName: ocupacion
-    user: ocupacion
